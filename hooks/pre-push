@@ -1,0 +1,91 @@
+#!/bin/sh
+pathToScript="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+source $pathToScript/helpers
+
+failedOutputLines=20
+testsMinimumLines=3
+
+# Execute command
+function f_command(){
+    local actName=$1
+    local command=$2
+    local commandOutputFile=$actName
+
+    echo -e "$(f_colorAct "Start $actName")"
+
+    startTime=$(f_getCurrentTime)
+# Write to output file and store command PID
+    ${command}>$commandOutputFile & job=$!;
+# UI-spin while command is executing
+    f_spinner $job
+# Restore exit code by PID
+    wait $job
+    elapsedTime=$(f_getElapsedTime $startTime)
+# Get exit code
+    rc=$?
+
+    if [[ $rc != 0 ]] ; then
+        tail -n $failedOutputLines "${commandOutputFile}"
+        echo -e $(f_colorFailed "See '${commandOutputFile}' for details")
+        echo -e $(f_colorFailed "Failed $actName (in $elapsedTime)")
+        exit $rc
+    else
+        echo -e $(f_colorPassed "Complete $actName (in $elapsedTime)")
+    fi
+
+    rm "${commandOutputFile}" &>/dev/null
+}
+
+# Check if there are any tests
+# If there are no tests -> execution of dotnet test -t return 2 lines
+# In other case - 3 or  more
+function f_isTestsExists()
+{
+    local commandOutputFile="numberOfTests"
+
+# Get list of tests, get number of lines -> write to output file and store command PID
+    dotnet test -t | wc -l >$commandOutputFile & job=$!;
+# UI-spin while command is executing
+    f_spinner $job
+# Restore exit code by PID
+    wait $job
+# Get exit code
+    rc=$?
+    
+    if [[ $rc != 0 ]] ; then
+        echo -e $(f_colorFailed "Unexpected error $rc")
+        exit $rc
+    fi
+
+    numberOfLines=`cat $commandOutputFile`
+    rm "${commandOutputFile}" &>/dev/null
+    CODE=1
+
+    if [[ $numberOfLines -ge $testsMinimumLines ]] ; then
+        CODE=0
+    fi
+    return $CODE
+}
+
+# Check if only one solution exists
+# Ignore in other case
+function f_isSlnExists()
+{
+    numberOfSlnFiles=$(ls *.sln -R | wc -l 2>/dev/null)
+    CODE=1
+    if [[ $numberOfSlnFiles == 1 ]] ; then
+        CODE=0
+    fi
+    return $CODE
+}
+
+if ! f_isSlnExists; then
+    exit 0
+fi
+
+f_command "dotnet build" "dotnet build"
+if f_isTestsExists; then
+    f_command "dotnet test" "dotnet test"
+else
+    echo -e $(f_colorInfo "Tests not exists")
+fi
