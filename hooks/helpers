@@ -1,0 +1,56 @@
+#!/bin/sh
+
+# Text Colors
+failedColor=`tput setaf 1`
+passedColor=`tput setaf 2`
+actColor=`tput setaf 3`
+infoColor=`tput setaf 6`
+resetColor=`tput sgr0`
+
+# Functions to color text
+function f_colorBase(){
+    local targetColor=$1
+    local resetColor=$2
+    local inputStr=$3
+    echo "${targetColor}${inputStr}${resetColor}"
+};
+
+function f_colorFailed(){
+    echo $(f_colorBase $failedColor $resetColor "${1}")
+};
+
+function f_colorAct(){
+    echo $(f_colorBase $actColor $resetColor "${1}")
+};
+
+function f_colorInfo(){
+    echo $(f_colorBase $infoColor $resetColor "${1}")
+};
+
+function f_colorPassed(){
+    echo $(f_colorBase $passedColor $resetColor "${1}")
+};
+
+# UI-feature
+# Spins slashes while proccess with PID is executing
+function f_spinner(){
+    local PID=$1
+    while kill -0 $PID 2>/dev/null;do for s in / - \\ \|; do printf "\r$s";sleep .1;done;done
+# Move to start of line 
+    printf "\r"
+}
+
+# Return sec with msec starts from EPOCH
+function f_getCurrentTime(){
+    echo `date +%s%N`
+}
+
+# Return difference between start time and current time
+function f_getElapsedTime(){
+    local start=$1
+    end=$(f_getCurrentTime)
+    runtime=$(((end-start) / 1000000))
+    sec=$((runtime / 1000))
+    msec=$((runtime - (sec * 1000)))
+    echo "${sec}.${msec} seconds"
+}

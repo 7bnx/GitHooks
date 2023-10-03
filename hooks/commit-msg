@@ -1,0 +1,31 @@
+#!/bin/sh
+pathToScript="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+source $pathToScript/helpers
+
+if [ -z "$1" ]; then
+	echo -e $(f_colorFailed "Missed commit message")
+	exit 1
+fi
+
+# The first arg is the path to the git commit temporary file
+commitMessageTempFile=$1
+
+# Get commit-message from the temporary file
+commitMessage=`head -n1 $commitMessageTempFile`
+
+# Ignore merge requests
+if grep -iqE "^Merge branch .+" "$commitMessageTempFile"; then
+	echo -e $(f_colorInfo "Commit hook: ignoring branch merge")
+	exit 0
+fi
+
+# Regex reference: https://gist.github.com/marcojahn/482410b728c31b221b70ea6d2c433f0c
+# Normal regex
+# commit_regex='^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test){1}(\([\w\-\.]+\))?(!)?: ([\w ])+([\s\S]*)'
+# Regex for grep/posix:
+commit_regex='^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test){1}(\([[:alnum:]._-]+\))?(!)?: ([[:alnum:]])+([[:space:][:print:]]*)'
+
+if ! grep -iqE "$commit_regex" "$commitMessageTempFile"; then
+	echo -e $(f_colorFailed "Commit message not follow semantic versioning: www.conventionalcommits.org/en/")
+	exit 1
+fi
