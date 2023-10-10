@@ -54,3 +54,14 @@ function f_getElapsedTime(){
     msec=$((runtime - (sec * 1000)))
     echo "${sec}.${msec} seconds"
 }
+
+# Check if exactly one solution exists
+function f_isSlnExists()
+{
+    numberOfSlnFiles=$(ls *.sln -R 2>/dev/null | wc -l 2>/dev/null)
+    CODE=1
+    if [[ $numberOfSlnFiles == 1 ]] ; then
+        CODE=0
+    fi
+    return $CODE
+}

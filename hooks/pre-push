@@ -67,18 +67,6 @@ function f_isTestsExists()
     return $CODE
 }
 
-# Check if only one solution exists
-# Ignore in other case
-function f_isSlnExists()
-{
-    numberOfSlnFiles=$(ls *.sln -R | wc -l 2>/dev/null)
-    CODE=1
-    if [[ $numberOfSlnFiles == 1 ]] ; then
-        CODE=0
-    fi
-    return $CODE
-}
-
 if ! f_isSlnExists; then
     exit 0
 fi
