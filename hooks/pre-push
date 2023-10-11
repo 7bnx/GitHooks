@@ -20,9 +20,10 @@ function f_command(){
     f_spinner $job
 # Restore exit code by PID
     wait $job
-    elapsedTime=$(f_getElapsedTime $startTime)
 # Get exit code
     rc=$?
+    
+    elapsedTime=$(f_getElapsedTime $startTime)
 
     if [[ $rc != 0 ]] ; then
         tail -n $failedOutputLines "${commandOutputFile}"
