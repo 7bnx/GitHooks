@@ -1,0 +1,90 @@
+#!/bin/sh
+
+pathToScript="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+source $pathToScript/helpers
+
+if ! f_isSlnExists; then
+    exit 0
+fi
+
+# store only indexed files
+changedFilesStream=$(git diff --name-only --cached)
+
+# list only staged files (last commit)
+# can use in post-commit hook
+# git show --name-only --pretty=""
+# disble post-commit hook because of the reccusion 
+# git -c core.hooksPath=/dev/null commit -a --no-verify --amend --no-edit --no-post-rewrite
+
+# list changed and new files with status(D -deleted, M - modified, ?? - untracked)
+# git status --porcelain
+
+# additional extension check
+# cSharpFileEstansion=".cs"
+# if [[ (${#changedFilesStream} = 0) || ($changedFilesStream != *$cSharpFileEstansion* ) ]] ; then
+if [[ (${#changedFilesStream} = 0) ]] ; then
+    exit 0
+fi
+
+actName="formatting"
+formatOutputFile="dotnet format.log"
+startTime=$(f_getCurrentTime)
+
+echo -e $(f_colorAct "Start $actName")
+
+#get files: unstaged, modified
+#and post pipeline of names to 'format' process
+#-- - means 'from pipeline'
+git diff --name-only --cached | dotnet format -v d --include -- -  > $formatOutputFile 2>&1 & job=$!;
+# UI-spin while command is executing
+f_spinner $job
+# Restore exit code by PID
+wait $job
+# Get exit code
+rc=$?
+
+elapsedTime=$(f_getElapsedTime $startTime)
+if [[ $rc != 0 ]] ; then
+    head -n 20 $formatOutputFile
+    echo -e $(f_colorFailed "See '${formatOutputFile}' for details")
+    echo -e $(f_colorFailed "Failed $actName (in $elapsedTime)")
+    exit $rc
+else
+    echo -e $(f_colorPassed "Complete $actName (in $elapsedTime)")
+fi
+
+# "${formatOutputFile}" &>/dev/null
+
+# create list of existed files
+listOfExistedFiles=()
+
+# read by line
+while read -r file 
+do
+    if [ -f "$file" ]; then
+        listOfExistedFiles+=( "$file" )
+    fi
+done <<< $changedFilesStream
+
+# flattern array and add files to index
+git add "${listOfExistedFiles[@]}"
+
+rc=$?
+if [[ $rc != 0 ]] ; then
+    echo -e $(f_colorFailed "Failed add formatted files to index")
+    exit $rc
+fi
+
+# Same as prev
+# create list of changed files (new line delimiter)
+# readarray -t listOfChangedFiles <<< $changedFilesStream
+# create list of existed files
+# listOfExistedFiles=()
+
+# for file in "${listOfChangedFiles[@]}"; do
+#     if [ -f "$file" ]; then
+#         listOfExistedFiles+=( "$file" )
+#     fi
+# done
+# flattern array and add files to index
+# git add "${listOfExistedFiles[@]}"
