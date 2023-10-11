@@ -7,5 +7,6 @@
 
 ## List of hooks
 
+* **pre-commit** - format files
 * **commit-msg** - hook that verify commit message for compliance with [conventional commits specification](https://www.conventionalcommits.org/en/v1.0.0/)
 * **pre-push** - build solution and start tests before push to remote
