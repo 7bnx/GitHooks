@@ -9,7 +9,7 @@ testsMinimumLines=3
 function f_command(){
     local actName=$1
     local command=$2
-    local commandOutputFile=$actName
+    local commandOutputFile="${actName}.log"
 
     echo -e "$(f_colorAct "Start $actName")"
 
